@@ -26,7 +26,8 @@
     const el=document.createElement('div');el.id='cloud-widget';
     el.style.cssText='position:fixed;bottom:16px;right:16px;z-index:8;background:#181a18;color:white;padding:10px 12px;border-radius:12px;box-shadow:0 8px 30px #0002;font:12px system-ui;max-width:calc(100vw - 32px)';
     el.innerHTML='<div id="cloud-status" style="margin-bottom:7px">Checking cloud connection…</div><button id="cloud-button" style="background:#d7ff70;border:0;border-radius:7px;padding:7px 10px;cursor:pointer">Cloud account</button>';
-    document.body.appendChild(el);
+    const slot=document.getElementById('cloud-slot');
+    if(slot){el.className='inline';slot.appendChild(el);}else document.body.appendChild(el);
     document.getElementById('cloud-button').addEventListener('click',openAccount);
   }
   function openAccount() {
@@ -56,12 +57,13 @@
       const localHasData=data.applications.length>0||data.companies.some(c=>!['c1','c2','c3','c4'].includes(c.id));
       if(localHasData && JSON.stringify(data)!==JSON.stringify(row.payload) &&
          confirm('Cloud data exists. Press OK to load cloud data, or Cancel to keep your local data and upload it to cloud.')) {
-        data=row.payload;originalSave();render();
-      } else if(!localHasData) {data=row.payload;originalSave();render();}
+        data=migrate(row.payload);originalSave();render();
+      } else if(!localHasData) {data=migrate(row.payload);originalSave();render();}
       else {queuePush();}
     } else {queuePush();}
     status('Cloud connected · '+user.email);
   }
+  window.openCloudAccount=openAccount;
   ensureControl();
   if(client){
     client.auth.onAuthStateChange((event,session)=>{setTimeout(()=>onUser(session?.user||null),0)});

@@ -26,6 +26,16 @@ Upload `index.html`, `cloud.js`, `config.js`, `schema.sql`, and `vercel.json` to
 - On first login, the app uploads your current local data. On other devices it loads the cloud workspace.
 - Export JSON backups regularly.
 
+## How the tracker works
+- **Today** is the home screen: overdue and upcoming follow-ups, jobs that need a next step, applications that have gone quiet, upcoming interviews and your funnel.
+- **Pipeline** has one column per stage: Saved → Applied → Interviewing → Offer → Closed. Closed jobs keep an outcome (Rejected, No response, Withdrawn, Declined offer, Accepted). Drag cards between columns, or use the Table view to sort, edit inline and bulk-update.
+- Click any job to open its detail panel. Every change saves automatically, and each stage change is logged in the job's activity timeline.
+- Moving a job to **Applied** sets the applied date and a follow-up (7 days by default, see Settings). Adding an interview moves the job to Interviewing.
+- Each job links to a **company**. Companies are created automatically and show all their jobs.
+- Jobs come in three ways: the Chrome extension (`#jobimport=` link, unchanged), **+ Add job** (paste a link, and the company is guessed), or **Import & export → Import CSV** (column matching and duplicate detection).
+- Data saved by the previous version is migrated automatically on first load. The old `status` field is kept in sync, so older versions can still read it.
+- Shortcuts: `n` adds a job, `/` focuses search, `Esc` closes panels.
+
 ## Important
 - Local mode remains functional without Supabase.
 - `config.js` may contain a public/publishable key, never a service_role or secret key.
