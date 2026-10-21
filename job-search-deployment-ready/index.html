@@ -26,7 +26,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>Number.isFinite(+v)&&v!==''&&v!=null?new Intl.NumberFormat('en-BE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(+v):'—';
 const dt=v=>v?new Date(v+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
-const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
+let save=()=>localStorage.setItem(KEY,JSON.stringify(data));
 const id=()=>String(Date.now())+Math.random().toString(36).slice(2,6);
 const estimateNet=g=>g?Math.max(0,Math.round((+g*0.8693-300)*.78+300)):null; // approximate only
 const score=a=>{let x=[];if(a.interest)x.push(+a.interest/5*50);if(a.gross)x.push(Math.min(1,estimateNet(a.gross)/data.settings.targetNet)*25);if(a.commute!==''&&a.commute!=null)x.push(Math.max(0,1-(+a.commute/90))*15);if(a.arrangement)x.push(({Remote:10,Hybrid:8,'On-site':4})[a.arrangement]||0);return x.length?Math.round(x.reduce((u,v)=>u+v,0)/( (a.interest?50:0)+(a.gross?25:0)+(a.commute!==''&&a.commute!=null?15:0)+(a.arrangement?10:0))*100):null};
@@ -66,4 +66,30 @@ function exportJSON(){download('job-search-backup.json',JSON.stringify(data,null
 function exportCSV(){let fields=appFields.map(x=>x[0]);let rows=[fields,...data.applications.map(a=>fields.map(f=>a[f]??''))];download('job-search-applications.csv',rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')}
 async function importJSON(file){if(!file)return;try{let incoming=JSON.parse(await file.text());if(!Array.isArray(incoming.applications)||!Array.isArray(incoming.companies))throw Error('Invalid backup');if(!confirm('Replace your current data with this backup?'))return;data={...structuredClone(initial),...incoming};save();render()}catch(e){alert('Could not import backup: '+e.message)}}
 render();
-</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="cloud.js"></script></body></html>
+</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="cloud.js"></script>
+<script>
+// Job Save Chrome extension import bridge. The URL fragment is removed immediately.
+(function(){
+  const prefix='#jobimport=';
+  if(!location.hash.startsWith(prefix))return;
+  const encoded=location.hash.slice(prefix.length);
+  history.replaceState(null,'',location.pathname+location.search);
+  try {
+    if(encoded.length>20000)throw Error('Import too large');
+    const job=JSON.parse(decodeURIComponent(encoded));
+    if(!job || typeof job!=='object' || !job.company || !job.title || !/^https?:\/\//.test(job.jobUrl||''))throw Error('Invalid job');
+    const allowed=['company','title','location','jobUrl','posted','employment','arrangement','languages','gross','notes','status','opportunity','nextAction'];
+    const record={id:id(),status:'Interested',opportunity:'Published opening',...Object.fromEntries(allowed.filter(k=>typeof job[k]==='string'||typeof job[k]==='number').map(k=>[k,String(job[k]).slice(0,k==='notes'?4000:500)]))};
+    if(typeof job.jobType==='string' && !record.employment)record.employment=job.jobType.slice(0,500);
+    const existing=data.applications.find(a=>a.jobUrl && a.jobUrl.split('?')[0]===record.jobUrl.split('?')[0]);
+    if(existing){
+      if(confirm('This job URL is already in your tracker. Open its record?')){page='applications';render();edit('application',existing.id)}
+      return;
+    }
+    if(!confirm('Save "'+record.title.slice(0,90)+'" at '+record.company.slice(0,90)+' to your job tracker?'))return;
+    data.applications.unshift(record);
+    save();page='applications';render();edit('application',record.id);
+  }catch(e){alert('Job import failed: '+e.message)}
+})();
+</script>
+</body></html>
